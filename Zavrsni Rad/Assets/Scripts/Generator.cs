@@ -3,7 +3,6 @@ using System;
 using UnityEngine;
 using TMPro;
 using System.Linq;
-using System.Text;
 
 public class Generator : MonoBehaviour
 {
@@ -13,7 +12,7 @@ public class Generator : MonoBehaviour
     private TextMeshPro degreeText_TMPro;
 
     // Generator objects
-    private List<Node> listOfNodes = new List<Node>();
+    public static List<Node> listOfNodes = new List<Node>();
     private Stack<Node> selectedNodeStack = new Stack<Node>();
     public static bool isDoneGenerating = false;
 
@@ -131,7 +130,7 @@ public class Generator : MonoBehaviour
             listOfNodes[numberOrderOfNode].degree = listOfNodes[numberOrderOfNode].connections;
         }
 
-        if (listOfNodes.Count > 10)
+        if (listOfNodes.Count > 4)
         // GUI
         {
             SpawnGraph();
@@ -152,17 +151,20 @@ public class Generator : MonoBehaviour
         for (int numberOrder = 0; numberOrder < listOfNodes.Count; numberOrder++)
         {
             // Set text of degree
-            degreeText_TMPro.SetText(listOfNodes[numberOrder].degree.ToString());
+            //degreeText_TMPro.SetText(listOfNodes[numberOrder].degree.ToString());
+            degreeText_TMPro.text = listOfNodes[numberOrder].degree.ToString();
 
             // Spawn nodes
             GameObject nodeClone = Instantiate(nodeGameObject, new Vector3(listOfNodes[numberOrder].x, listOfNodes[numberOrder].y, 0), Quaternion.Euler(0, 0, 0));
             nodesToDestroy.Add(nodeClone);
 
-            List<GameObject> gObj_lines = new List<GameObject>();
-            List<LineRenderer> lRndr_lines = new List<LineRenderer>();
+            #region FutureFeature
+            //List<GameObject> gObj_lines = new List<GameObject>();
+            //List<LineRenderer> lRndr_lines = new List<LineRenderer>();
 
-            int numberOrderOfLine = 0;
+            //int numberOrderOfLine = 0;
 
+            /*
             // Drawing lines between child and parent
             if (numberOrder > 0)
             {
@@ -349,6 +351,8 @@ public class Generator : MonoBehaviour
                     numberOrderOfLine++;
                 }
             }
+            */
+            #endregion
         }
     }
 
