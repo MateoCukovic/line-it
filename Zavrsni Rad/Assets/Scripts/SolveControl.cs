@@ -2,32 +2,39 @@
 using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
+using UnityEngine.SceneManagement;
 
 public class SolveControl : MonoBehaviour
 {
-    private Sprite nodeWhite;
+    private Sprite nodeGrey;
     private Sprite nodeRed;
     private Sprite nodeGreen;
 
+    private Color grey = new Color(0.52f, 0.55f, 0.55f);
+    private Color red = new Color(0.71f, 0.02f, 0.02f);
+    private Color green = new Color(0.20f, 0.71f, 0.015f);
+
+    private bool UI_happened = false;
+
     void Start()
     {
-        nodeWhite = Resources.Load<Sprite>("Imports/nodeWhite");
+        nodeGrey = Resources.Load<Sprite>("Imports/nodeGrey");
         nodeRed = Resources.Load<Sprite>("Imports/nodeRed");
         nodeGreen = Resources.Load<Sprite>("Imports/nodeGreen");
     }
 
     void Update()
     {
-        if(TouchControl.node_gameObjects != null)
+        if(TouchControl.loadingFinished)
         {
             CheckForConnectionsAmount();
         }    
         
         if(ConnectionsFilled())
         {
-            if(DFS())
+            if(DFS() && !UI_happened)
             {
-                Debug.Log("Level passed");
+                StartCoroutine(UI_Display());  
             }
         }
     }
@@ -39,14 +46,20 @@ public class SolveControl : MonoBehaviour
             if(Generator.listOfNodes[numberOrderOfNode].connections == Generator.listOfNodes[numberOrderOfNode].degree)
             {
                 TouchControl.node_gameObjects[numberOrderOfNode].gameObject.transform.GetChild(0).GetComponent<SpriteRenderer>().sprite = nodeGreen;
+
+                LineColoring(numberOrderOfNode, green);
             }
             else if(Generator.listOfNodes[numberOrderOfNode].connections > Generator.listOfNodes[numberOrderOfNode].degree)
             {
                 TouchControl.node_gameObjects[numberOrderOfNode].gameObject.transform.GetChild(0).GetComponent<SpriteRenderer>().sprite = nodeRed;
+
+                LineColoring(numberOrderOfNode, red);
             }
             else
             {
-                TouchControl.node_gameObjects[numberOrderOfNode].gameObject.transform.GetChild(0).GetComponent<SpriteRenderer>().sprite = nodeWhite;
+                TouchControl.node_gameObjects[numberOrderOfNode].gameObject.transform.GetChild(0).GetComponent<SpriteRenderer>().sprite = nodeGrey;
+
+                LineColoring(numberOrderOfNode, grey);
             }
         }
     }
@@ -110,5 +123,40 @@ public class SolveControl : MonoBehaviour
         }
 
         return isCompleted;
+    }
+
+    private void LineColoring(int numberOrder, Color color)
+    {
+        Gradient gradient = new Gradient();
+
+        for (int i = 0; i < TouchControl.lineRenderers.Count; i++)
+        {
+            if (TouchControl.node_gameObjects[numberOrder].GetComponent<CircleCollider2D>().OverlapPoint(TouchControl.lineRenderers[i].GetPosition(0)))
+            {
+                gradient.SetKeys(
+                    new GradientColorKey[] { new GradientColorKey(color, 0.0f), new GradientColorKey(TouchControl.lineRenderers[i].endColor, 1.0f) },
+                    new GradientAlphaKey[] { new GradientAlphaKey(1.0f, 0.0f), new GradientAlphaKey(1.0f, 1.0f) }
+                );
+
+                TouchControl.lineRenderers[i].colorGradient = gradient;
+            }
+            else if (TouchControl.node_gameObjects[numberOrder].GetComponent<CircleCollider2D>().OverlapPoint(TouchControl.lineRenderers[i].GetPosition(1)))
+            {
+                TouchControl.lineRenderers[i].endColor = color;
+
+                gradient.SetKeys(
+                    new GradientColorKey[] { new GradientColorKey(TouchControl.lineRenderers[i].startColor, 0.0f), new GradientColorKey(color, 1.0f) },
+                    new GradientAlphaKey[] { new GradientAlphaKey(1.0f, 0.0f), new GradientAlphaKey(1.0f, 1.0f) }
+                );
+
+                TouchControl.lineRenderers[i].colorGradient = gradient;
+            }
+        }
+    }
+
+    private IEnumerator UI_Display()
+    {
+        yield return new WaitForSeconds(1f);
+        UI_LevelPassed.ShowUI();
     }
 }

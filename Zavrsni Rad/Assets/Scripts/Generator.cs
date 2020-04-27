@@ -7,35 +7,46 @@ using System.Linq;
 public class Generator : MonoBehaviour
 {
     // Unity specific objects
-    List<GameObject> nodesToDestroy = new List<GameObject>();
+    List<GameObject> nodesToDestroy;
     [SerializeField] private GameObject nodeGameObject;
     private TextMeshPro degreeText_TMPro;
 
     // Generator objects
-    public static List<Node> listOfNodes = new List<Node>();
-    private Stack<Node> selectedNodeStack = new Stack<Node>();
-    public static bool isDoneGenerating = false;
+    public static List<Node> listOfNodes;
+    private Stack<Node> selectedNodeStack;
+    public static bool isDoneGenerating;
 
     // Generator parameters
     private int level = 10;
-    private float minDistance = 1f;
-    private float maxDistance = 4f;
-    private float minDistanceInNeighbourFinding = 1f;
-    private float maxDistanceInNeighbourFinding = 5f;
-    private float offsetOfNodeAvoidance = 1.5f;
-    private float gameArea;
+    private float minDistance = 0.5f;
+    private float maxDistance = 2.5f;
+    private float minDistanceInNeighbourFinding = 0.5f;
+    private float maxDistanceInNeighbourFinding = 3.5f;
+    private float offsetOfNodeAvoidance = 1f;
+    private float gameAreaX = 4.5f;
+    private float gameAreaY = 8f;
 
     // Control the expansion
-    private int numberOfConnections = 0;
+    private int numberOfConnections;
 
-    public static Dictionary<string, float> boundaryPositions = new Dictionary<string, float>();
+    public static Dictionary<string, float> boundaryPositions;
+    public static Dictionary<string, Node> farthestNodes;
 
     // Execute before first frame
     private void Start()
     {
-        degreeText_TMPro = nodeGameObject.transform.GetChild(1).GetComponent<TextMeshPro>();
+        // Initialization
+        nodesToDestroy = new List<GameObject>();
+        listOfNodes = new List<Node>();
+        selectedNodeStack = new Stack<Node>();
 
-        gameArea = 7 + Mathf.RoundToInt(level / 10);
+        isDoneGenerating = false;
+        numberOfConnections = 0;
+
+        boundaryPositions = new Dictionary<string, float>();
+        farthestNodes = new Dictionary<string, Node>();
+
+        degreeText_TMPro = nodeGameObject.transform.GetChild(1).GetComponent<TextMeshPro>();
 
         GenerateGraph();
     }
@@ -159,12 +170,13 @@ public class Generator : MonoBehaviour
             nodesToDestroy.Add(nodeClone);
 
             #region FutureFeature
-            //List<GameObject> gObj_lines = new List<GameObject>();
-            //List<LineRenderer> lRndr_lines = new List<LineRenderer>();
-
-            //int numberOrderOfLine = 0;
-
             /*
+            List<GameObject> gObj_lines = new List<GameObject>();
+            List<LineRenderer> lRndr_lines = new List<LineRenderer>();
+
+            int numberOrderOfLine = 0;
+
+            
             // Drawing lines between child and parent
             if (numberOrder > 0)
             {
@@ -517,15 +529,15 @@ public class Generator : MonoBehaviour
     {
         List<Tuple<float, float>> listOfPotentialPlacements = new List<Tuple<float, float>>();
 
-        float offsetOfForLoop = UnityEngine.Random.Range(0.25f, 1f);
+        float offsetOfForLoop;
 
         // top left corner to down right corner search
         // x
-        for (float x = -gameArea; x <= gameArea; x += offsetOfForLoop)
+        for (float x = -gameAreaX; x <= gameAreaX; x += offsetOfForLoop)
         {
             offsetOfForLoop = UnityEngine.Random.Range(0.25f, 1f);
             // y
-            for (float y = gameArea; y >= -gameArea; y -= offsetOfForLoop)
+            for (float y = gameAreaY; y >= -gameAreaY; y -= offsetOfForLoop)
             {
                 offsetOfForLoop = UnityEngine.Random.Range(0.25f, 1f);
 
@@ -762,17 +774,46 @@ public class Generator : MonoBehaviour
         float maxX = listOfNodes[0].x;
         float maxY = listOfNodes[0].y;
 
+        Node farthestNodeMinX = listOfNodes[0];
+        Node farthestNodeMinY = listOfNodes[0];
+        Node farthestNodeMaxX = listOfNodes[0];   
+        Node farthestNodeMaxY = listOfNodes[0];
+
         for (int i = 0; i < listOfNodes.Count; i++)
         {
-            if (listOfNodes[i].x < minX) minX = listOfNodes[i].x;
-            if (listOfNodes[i].y < minY) minY = listOfNodes[i].y;
-            if (listOfNodes[i].x > maxX) maxX = listOfNodes[i].x;
-            if (listOfNodes[i].y > maxY) maxY = listOfNodes[i].y;
+            if (listOfNodes[i].x < minX)
+            {
+                minX = listOfNodes[i].x;
+                farthestNodeMinX = listOfNodes[i];
+            }
+
+            if (listOfNodes[i].y < minY)
+            {
+                minY = listOfNodes[i].y;
+                farthestNodeMinY = listOfNodes[i];
+            }
+
+            if (listOfNodes[i].x > maxX)
+            {
+                maxX = listOfNodes[i].x;
+                farthestNodeMaxX = listOfNodes[i];
+            }
+
+            if (listOfNodes[i].y > maxY)
+            {
+                maxY = listOfNodes[i].y;
+                farthestNodeMaxY = listOfNodes[i];
+            }
         }
 
         boundaryPositions.Add("minX", minX);
         boundaryPositions.Add("minY", minY);
         boundaryPositions.Add("maxX", maxX);
         boundaryPositions.Add("maxY", maxY);
+
+        farthestNodes.Add("farMinX", farthestNodeMinX);
+        farthestNodes.Add("farMinY", farthestNodeMinY);
+        farthestNodes.Add("farMaxX", farthestNodeMaxX);
+        farthestNodes.Add("farMaxY", farthestNodeMaxY);
     }
 }

@@ -29,13 +29,25 @@ public class TouchControl : MonoBehaviour
 
     private Drawing isDrawing;
 
-    private List<BoxCollider2D> boxColliders2D = new List<BoxCollider2D>();
-    private List<LineRenderer> lineRenderers = new List<LineRenderer>();
-    private List<GameObject> line_gameObjects = new List<GameObject>();
+    private List<BoxCollider2D> boxColliders2D;
+    public static List<LineRenderer> lineRenderers;
+    private List<GameObject> line_gameObjects;
+
+    public static bool loadingFinished;
 
     // Execute before first frame
     void Start()
     {
+        // Initialization
+        boxColliders2D = new List<BoxCollider2D>();
+        lineRenderers = new List<LineRenderer>();
+        line_gameObjects = new List<GameObject>();
+
+        if(node_gameObjects != null)
+            Array.Clear(node_gameObjects, 0, node_gameObjects.Length);
+
+        loadingFinished = false;
+
         isTouching = Touching.No;
         isDrawing = Drawing.No;
     }
@@ -43,96 +55,111 @@ public class TouchControl : MonoBehaviour
     // Execute every frame
     void Update()
     {
+        if(UI_InGame.restartLevel)
+        {
+            ResetLevel();
+            UI_InGame.restartLevel = false;
+            loadingFinished = true;
+        }
+
         if (Generator.isDoneGenerating)
         {
             node_gameObjects = GameObject.FindGameObjectsWithTag("Node");
             ClearNodeObjectSettings();
             Generator.isDoneGenerating = false;
+            loadingFinished = true;
         }
 
-        // Drawing lines on touching the nodes
-        if (node_gameObjects != null && Input.touchCount > 0)
+        // If UI not present
+        if(!UI_LevelPassed.UI_showing_Passed && !UI_Return.UI_showing_Return)
         {
-            touch = Input.GetTouch(0);
-            Vector3 touchPosition = Camera.main.ScreenToWorldPoint(touch.position);
-
-            for (int numberOrderOfNode = 0; numberOrderOfNode < node_gameObjects.Length; numberOrderOfNode++)
+            // Drawing lines on touching the nodes
+            if (node_gameObjects != null && Input.touchCount > 0)
             {
-                if (node_gameObjects[numberOrderOfNode].GetComponent<CircleCollider2D>().OverlapPoint(touchPosition) && areaTouchEnded && isDrawing == Drawing.No)
-                {
-                    isTouching = Touching.Node;
-                    nodeTouchEnded = false;
+                touch = Input.GetTouch(0);
+                Vector3 touchPosition = Camera.main.ScreenToWorldPoint(touch.position);
 
-                    StartCoroutine(DrawLine(node_gameObjects[numberOrderOfNode], numberOrderOfNode));
-                }
-                else if (numberOrderOfNode == node_gameObjects.Length - 1 && nodeTouchEnded)
+                for (int numberOrderOfNode = 0; numberOrderOfNode < node_gameObjects.Length; numberOrderOfNode++)
                 {
-                    isTouching = Touching.Area;
-                    areaTouchEnded = false;
+                    if (node_gameObjects[numberOrderOfNode].GetComponent<CircleCollider2D>().OverlapPoint(touchPosition) && areaTouchEnded && isDrawing == Drawing.No)
+                    {
+                        isTouching = Touching.Node;
+                        nodeTouchEnded = false;
+
+                        StartCoroutine(DrawLine(node_gameObjects[numberOrderOfNode], numberOrderOfNode));
+                    }
+                    else if (numberOrderOfNode == node_gameObjects.Length - 1 && nodeTouchEnded)
+                    {
+                        isTouching = Touching.Area;
+                        areaTouchEnded = false;
+                    }
                 }
             }
-        }
 
-        // Removing lines on touch
-        if (boxColliders2D != null && Input.touchCount > 0 && touch.phase == TouchPhase.Ended) 
-        {
-            Vector3 touchPosition = Camera.main.ScreenToWorldPoint(touch.position);
-
-            for (int numberOrder = 0; numberOrder < boxColliders2D.Count; numberOrder++)
+            // Removing lines on touch
+            if (boxColliders2D != null && Input.touchCount > 0 && touch.phase == TouchPhase.Ended)
             {
-                if (boxColliders2D[numberOrder].GetComponent<BoxCollider2D>().OverlapPoint(touchPosition) && isDrawing == Drawing.No)
+                Vector3 touchPosition = Camera.main.ScreenToWorldPoint(touch.position);
+
+                for (int numberOrder = 0; numberOrder < boxColliders2D.Count; numberOrder++)
                 {
-                    // Remove double line if exists
-                    for(int i = 0; i < node_gameObjects.Length; i++)
+                    if (boxColliders2D[numberOrder].GetComponent<BoxCollider2D>().OverlapPoint(touchPosition) && isDrawing == Drawing.No)
                     {
-                        if((node_gameObjects[i].GetComponent<CircleCollider2D>().OverlapPoint(lineRenderers[numberOrder].GetPosition(0)) ||
-                           node_gameObjects[i].GetComponent<CircleCollider2D>().OverlapPoint(lineRenderers[numberOrder].GetPosition(1))) &&
-                           ((node_gameObjects[i].transform.position.x != lineRenderers[numberOrder].GetPosition(0).x && node_gameObjects[i].transform.position.y != lineRenderers[numberOrder].GetPosition(0).y) ||
-                           (node_gameObjects[i].transform.position.x != lineRenderers[numberOrder].GetPosition(1).x && node_gameObjects[i].transform.position.y != lineRenderers[numberOrder].GetPosition(1).y)))
+                        List<GameObject> nodeOverlaps = new List<GameObject>();
+
+                        // Remove double line if exists
+                        for (int i = 0; i < node_gameObjects.Length; i++)
                         {
-                            float k1 = (lineRenderers[numberOrder].GetPosition(0).y - lineRenderers[numberOrder].GetPosition(1).y) / (lineRenderers[numberOrder].GetPosition(0).x - lineRenderers[numberOrder].GetPosition(1).x);
-
-                            for (int j = 0; j < lineRenderers.Count; j++)
+                            if (node_gameObjects[i].GetComponent<CircleCollider2D>().OverlapPoint(lineRenderers[numberOrder].GetPosition(0)) ||
+                               node_gameObjects[i].GetComponent<CircleCollider2D>().OverlapPoint(lineRenderers[numberOrder].GetPosition(1)))
                             {
-                                float k2 = (lineRenderers[j].GetPosition(0).y - lineRenderers[j].GetPosition(1).y) / (lineRenderers[j].GetPosition(0).x - lineRenderers[j].GetPosition(1).x);
-
-                                if (k1 == k2)
-                                {
-                                    RemoveNodeConnections(lineRenderers[j]);
-
-                                    Destroy(boxColliders2D[j]);
-                                    Destroy(lineRenderers[j]);
-                                    Destroy(line_gameObjects[j]);
-
-                                    boxColliders2D.RemoveAt(j);
-                                    lineRenderers.RemoveAt(j);
-                                    line_gameObjects.RemoveAt(j);
-
-                                    break;
-                                }
+                                nodeOverlaps.Add(node_gameObjects[i]);
                             }
 
-                            break;
+                            if (i == node_gameObjects.Length - 1)
+                            {
+                                for (int j = 0; j < lineRenderers.Count; j++)
+                                {
+                                    if ((nodeOverlaps[0].GetComponent<CircleCollider2D>().OverlapPoint(lineRenderers[j].GetPosition(0)) ||
+                                        nodeOverlaps[0].GetComponent<CircleCollider2D>().OverlapPoint(lineRenderers[j].GetPosition(1))) &&
+                                        (nodeOverlaps[1].GetComponent<CircleCollider2D>().OverlapPoint(lineRenderers[j].GetPosition(0)) ||
+                                        nodeOverlaps[1].GetComponent<CircleCollider2D>().OverlapPoint(lineRenderers[j].GetPosition(1))) &&
+                                        !ReferenceEquals(lineRenderers[numberOrder], lineRenderers[j]))
+                                    {
+                                        RemoveNodeConnections(lineRenderers[j]);
+
+                                        Destroy(boxColliders2D[j]);
+                                        Destroy(lineRenderers[j].material);
+                                        Destroy(lineRenderers[j]);
+                                        Destroy(line_gameObjects[j]);
+
+                                        boxColliders2D.RemoveAt(j);
+                                        lineRenderers.RemoveAt(j);
+                                        line_gameObjects.RemoveAt(j);
+                                    }
+                                }
+                            }
                         }
+
+                        RemoveNodeConnections(lineRenderers[numberOrder]);
+
+                        Destroy(boxColliders2D[numberOrder]);
+                        Destroy(lineRenderers[numberOrder].material);
+                        Destroy(lineRenderers[numberOrder]);
+                        Destroy(line_gameObjects[numberOrder]);
+
+                        boxColliders2D.RemoveAt(numberOrder);
+                        lineRenderers.RemoveAt(numberOrder);
+                        line_gameObjects.RemoveAt(numberOrder);
                     }
-
-                    RemoveNodeConnections(lineRenderers[numberOrder]);
-
-                    Destroy(boxColliders2D[numberOrder]);
-                    Destroy(lineRenderers[numberOrder]);
-                    Destroy(line_gameObjects[numberOrder]);
-
-                    boxColliders2D.RemoveAt(numberOrder);
-                    lineRenderers.RemoveAt(numberOrder);
-                    line_gameObjects.RemoveAt(numberOrder);
                 }
             }
-        }
 
-        if (touch.phase == TouchPhase.Ended || isTouching == Touching.No)
-        {
-            nodeTouchEnded = true;
-            areaTouchEnded = true;
+            if (touch.phase == TouchPhase.Ended || isTouching == Touching.No)
+            {
+                nodeTouchEnded = true;
+                areaTouchEnded = true;
+            }
         }
     }
 
@@ -149,15 +176,18 @@ public class TouchControl : MonoBehaviour
         lineRenderer.positionCount = 2;
         lineRenderer.startWidth = 0.07f;
         lineRenderer.endWidth = 0.07f;
+        lineRenderer.material = new Material(Shader.Find("Sprites/Default"));
+        lineRenderer.startColor = new Color(0.52f, 0.55f, 0.55f);
+        lineRenderer.endColor = new Color(0.52f, 0.55f, 0.55f);
         lineRenderer.useWorldSpace = false;
 
-        lineRenderer.SetPosition(0, new Vector3(node_gameObject.transform.position.x, node_gameObject.transform.position.y, 0));
+        lineRenderer.SetPosition(0, new Vector3(node_gameObject.transform.position.x, node_gameObject.transform.position.y, 0.105f));
         
         // Run until connected or finger released
         while(true)
         {
             Vector3 fingerPosition = Camera.main.ScreenToWorldPoint(Input.mousePosition);
-            fingerPosition.z = 0;
+            fingerPosition.z = 0.105f;
 
             // Follow the finger
             lineRenderer.SetPosition(1, fingerPosition);
@@ -179,6 +209,8 @@ public class TouchControl : MonoBehaviour
                         {
                             if (lineRenderers.Any())
                             {
+                                bool singleHappened = false;
+
                                 for (int lineOrder = 0; lineOrder < lineRenderers.Count; lineOrder++)
                                 {
                                     // Double line
@@ -188,7 +220,9 @@ public class TouchControl : MonoBehaviour
                                         node_gameObjects[numberOrderOfNode].GetComponent<CircleCollider2D>().OverlapPoint(lineRenderers[lineOrder].GetPosition(1))))
                                     {
                                         // line start-end node
-                                        float k = -((lineRenderer.GetPosition(0).y - node_gameObjects[numberOrderOfNode].transform.position.y) / (lineRenderer.GetPosition(0).x - node_gameObjects[numberOrderOfNode].transform.position.x));
+                                        float k = -((lineRenderer.GetPosition(0).y - node_gameObjects[numberOrderOfNode].transform.position.y) / 
+                                            (lineRenderer.GetPosition(0).x - node_gameObjects[numberOrderOfNode].transform.position.x));
+
                                         float l = k * node_gameObjects[numberOrderOfNode].transform.position.x + node_gameObjects[numberOrderOfNode].transform.position.y;
 
                                         // parallels of double lines
@@ -217,11 +251,11 @@ public class TouchControl : MonoBehaviour
                                         float x2_end = k_inverse * l2 + y_inverse * l_endNormal;
                                         float y2_end = k_normal_inverse * l2 + y_normal_inverse * l_endNormal;
 
-                                        lineRenderer.SetPosition(0, new Vector3(x1_start, y1_start, 0));
-                                        lineRenderer.SetPosition(1, new Vector3(x1_end, y1_end, 0));
+                                        lineRenderer.SetPosition(0, new Vector3(x1_start, y1_start, 0.105f));
+                                        lineRenderer.SetPosition(1, new Vector3(x1_end, y1_end, 0.105f));
 
-                                        lineRenderers[lineOrder].SetPosition(0, new Vector3(x2_start, y2_start, 0));
-                                        lineRenderers[lineOrder].SetPosition(1, new Vector3(x2_end, y2_end, 0));
+                                        lineRenderers[lineOrder].SetPosition(0, new Vector3(x2_start, y2_start, 0.105f));
+                                        lineRenderers[lineOrder].SetPosition(1, new Vector3(x2_end, y2_end, 0.105f));
 
                                         AddColliderToLine(lineRenderer.GetPosition(0), lineRenderer.GetPosition(1), line_gameObject);
 
@@ -237,7 +271,7 @@ public class TouchControl : MonoBehaviour
                                     // Single line
                                     else if (node_gameObjects[numberOrderOfNode].GetComponent<CircleCollider2D>().OverlapPoint(fingerPosition) && lineOrder == lineRenderers.Count - 1)
                                     {
-                                        lineRenderer.SetPosition(1, new Vector3(node_gameObjects[numberOrderOfNode].transform.position.x, node_gameObjects[numberOrderOfNode].transform.position.y, 0));
+                                        lineRenderer.SetPosition(1, new Vector3(node_gameObjects[numberOrderOfNode].transform.position.x, node_gameObjects[numberOrderOfNode].transform.position.y, 0.105f));
 
                                         AddColliderToLine(lineRenderer.GetPosition(0), lineRenderer.GetPosition(1), line_gameObject);
 
@@ -250,7 +284,20 @@ public class TouchControl : MonoBehaviour
                                         Generator.listOfNodes[numberOrder].adjacentPlayerSetNodes.Add(Generator.listOfNodes[numberOrderOfNode]);
                                         Generator.listOfNodes[numberOrderOfNode].adjacentPlayerSetNodes.Add(Generator.listOfNodes[numberOrder]);
 
+                                        singleHappened = true;
+
                                         break;
+                                    }
+
+                                    // DEBUGGING
+                                    if(singleHappened)
+                                    {
+                                        if(lineRenderer.GetPosition(1).x != node_gameObjects[numberOrderOfNode].transform.position.x || lineRenderer.GetPosition(1).y != node_gameObjects[numberOrderOfNode].transform.position.y)
+                                        {
+                                            Debug.Log("Overreach");
+
+                                            lineRenderer.SetPosition(1, new Vector3(node_gameObjects[numberOrderOfNode].transform.position.x, node_gameObjects[numberOrderOfNode].transform.position.y, 0.105f));
+                                        }
                                     }
                                 }
 
@@ -293,6 +340,7 @@ public class TouchControl : MonoBehaviour
                 else if(touch.phase == TouchPhase.Ended && !node_gameObjects[numberOrderOfNode].GetComponent<CircleCollider2D>().OverlapPoint(fingerPosition))
                 {
                     Destroy(line_gameObject);
+                    Destroy(lineRenderer.material);
                     Destroy(lineRenderer);
 
                     break;
@@ -361,19 +409,28 @@ public class TouchControl : MonoBehaviour
     {
         for(int i = 0; i < node_gameObjects.Length; i++)
         {
-            /*
-            if((Generator.listOfNodes[i].x == lineRenderer.GetPosition(0).x && Generator.listOfNodes[i].y == lineRenderer.GetPosition(0).y) ||
-                (Generator.listOfNodes[i].x == lineRenderer.GetPosition(1).x && Generator.listOfNodes[i].y == lineRenderer.GetPosition(1).y))
-            {
-                Generator.listOfNodes[i].connections--;
-            }
-            */
-
             if(node_gameObjects[i].GetComponent<CircleCollider2D>().OverlapPoint(lineRenderer.GetPosition(0)) ||
                 node_gameObjects[i].GetComponent<CircleCollider2D>().OverlapPoint(lineRenderer.GetPosition(1)))
             {
                 Generator.listOfNodes[i].connections--;
             }
         }
+    }
+
+    private void ResetLevel()
+    {
+        for(int i = 0; i < boxColliders2D.Count; i++)
+        {
+            RemoveNodeConnections(lineRenderers[i]);
+
+            Destroy(boxColliders2D[i]);
+            Destroy(lineRenderers[i].material);
+            Destroy(lineRenderers[i]);
+            Destroy(line_gameObjects[i]);
+        }
+
+        boxColliders2D.Clear();
+        lineRenderers.Clear();
+        line_gameObjects.Clear();
     }
 }
