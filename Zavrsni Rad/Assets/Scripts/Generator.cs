@@ -162,7 +162,6 @@ public class Generator : MonoBehaviour
         for (int numberOrder = 0; numberOrder < listOfNodes.Count; numberOrder++)
         {
             // Set text of degree
-            //degreeText_TMPro.SetText(listOfNodes[numberOrder].degree.ToString());
             degreeText_TMPro.text = listOfNodes[numberOrder].degree.ToString();
 
             // Spawn nodes
