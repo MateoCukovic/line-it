@@ -4,13 +4,16 @@ using UnityEngine.UI;
 
 public class UI_MainMenu : MonoBehaviour
 {
-    [SerializeField] private RawImage videoUI;
+    private int screenWidth;
+    private int screenHeight;
 
     private void Start()
     {
-        videoUI.enabled = true;
+        screenWidth = Screen.width;
+        screenHeight = Screen.height;
 
-        LeanTween.moveX(gameObject, 540f, 1f).setEaseInQuad();
+        LeanTween.moveY(gameObject, screenHeight * 0.5f, 0f);
+        LeanTween.moveX(gameObject, screenWidth * 0.5f, 1f);
     }
 
     public void PlayGame()

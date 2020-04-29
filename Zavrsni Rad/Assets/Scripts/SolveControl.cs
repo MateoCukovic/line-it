@@ -157,5 +157,7 @@ public class SolveControl : MonoBehaviour
     {
         yield return new WaitForSeconds(1f);
         UI_LevelPassed.ShowUI();
+
+        UI_happened = true;
     }
 }

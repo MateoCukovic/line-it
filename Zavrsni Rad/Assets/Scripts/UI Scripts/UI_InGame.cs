@@ -1,25 +1,33 @@
-﻿using UnityEngine;
+﻿using System.Collections;
+using UnityEngine;
 
 public class UI_InGame : MonoBehaviour
 {
-    private static CanvasGroup canvasGroup;
     private static GameObject thisGameObject;
+    private static int screenWidth;
+    private int screenHeight;
 
     public static bool restartLevel;
 
+    private static bool UI_Display;
+
     private void Start()
     {
-        canvasGroup = gameObject.GetComponent<CanvasGroup>();
         thisGameObject = gameObject;
+        screenWidth = Screen.width;
+        screenHeight = Screen.height;
+
+        StartCoroutine(UI_scaling());
 
         restartLevel = false;
+        UI_Display = false;
 
         ShowUI();
     }
 
     private void Update()
     {
-        if(!UI_LevelPassed.UI_showing_Passed && !UI_Return.UI_showing_Return)
+        if(!UI_LevelPassed.UI_showing_Passed && !UI_Return.UI_showing_Return && !UI_Display)
         {
             ShowUI();
         }
@@ -27,14 +35,18 @@ public class UI_InGame : MonoBehaviour
 
     public static void HideUI()
     {
-        LeanTween.moveX(thisGameObject.transform.GetChild(0).gameObject, 1290f, 0.5f);
-        LeanTween.moveX(thisGameObject.transform.GetChild(1).gameObject, -210f, 0.5f);
+        LeanTween.moveX(thisGameObject.transform.GetChild(0).gameObject, screenWidth + screenWidth * 0.2f, 0.5f);
+        LeanTween.moveX(thisGameObject.transform.GetChild(1).gameObject, -screenWidth * 0.2f, 0.5f);
+
+        UI_Display = false;
     }
 
     public void ShowUI()
     {
-        LeanTween.moveX(thisGameObject.transform.GetChild(0).gameObject, 1025f, 0.5f);
-        LeanTween.moveX(thisGameObject.transform.GetChild(1).gameObject, 55f, 0.5f);
+        LeanTween.moveX(thisGameObject.transform.GetChild(0).gameObject, screenWidth * 0.95f, 0.5f);
+        LeanTween.moveX(thisGameObject.transform.GetChild(1).gameObject, screenWidth * 0.05f, 0.5f);
+
+        UI_Display = true;
     }
 
     public void RestartLevel()
@@ -45,5 +57,19 @@ public class UI_InGame : MonoBehaviour
     public void ReturnToMainMenu()
     {
         UI_Return.ShowUI();
+    }
+
+    private IEnumerator UI_scaling()
+    {
+        gameObject.transform.localScale = new Vector3(screenWidth, screenHeight);
+        gameObject.transform.GetChild(0).localScale = new Vector3(1f / screenWidth, 1f / screenHeight);
+        gameObject.transform.GetChild(1).localScale = new Vector3(1f / screenWidth, 1f / screenHeight);
+
+        LeanTween.moveX(gameObject.transform.GetChild(0).gameObject, screenWidth + screenWidth * 0.2f, 0f);
+        LeanTween.moveY(gameObject.transform.GetChild(0).gameObject, screenWidth * 0.05f, 0f);
+        LeanTween.moveX(gameObject.transform.GetChild(1).gameObject, -screenWidth * 0.2f, 0f);
+        LeanTween.moveY(gameObject.transform.GetChild(1).gameObject, screenHeight - screenWidth * 0.05f, 0f);
+
+        yield return new WaitForSeconds(0.5f);
     }
 }
