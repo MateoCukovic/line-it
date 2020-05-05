@@ -1,2 +1,2 @@
-# zavrsni-rad
-Final project in senior year of high school
+# line-it
+Mobile game inspired by graph theory
