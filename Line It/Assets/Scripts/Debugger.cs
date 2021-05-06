@@ -5,7 +5,7 @@ using System.IO;
 
 public class Debugger
 {
-    private static string filePath = @"C:\Users\mcuko\Desktop\Zavrsni Rad\log.txt";
+    private static string filePath = @"C:\Users\mcuko\Desktop\LOG\log.txt";
 
     public static void Log(StringBuilder stringBuilder)
     {

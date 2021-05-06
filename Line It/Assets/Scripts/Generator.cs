@@ -3,6 +3,7 @@ using System;
 using UnityEngine;
 using TMPro;
 using System.Linq;
+using System.Text;
 
 public class Generator : MonoBehaviour
 {
@@ -17,17 +18,15 @@ public class Generator : MonoBehaviour
     public static bool isDoneGenerating;
 
     // Generator parameters
-    private int level = 10;
     private float minDistance = 0.5f;
     private float maxDistance = 2.5f;
     private float minDistanceInNeighbourFinding = 0.5f;
     private float maxDistanceInNeighbourFinding = 3.5f;
-    private float offsetOfNodeAvoidance = 1f;
-    private float gameAreaX = 4.5f;
+    private float offsetOfNodeAvoidance = 0.75f;
+    private float gameAreaX = 5f;
     private float gameAreaY = 8f;
-
-    // Control the expansion
-    private int numberOfConnections;
+    private float minSearchingPositionOffset = 0.1f;
+    private float maxSearchingPositionOffset = 0.3f;
 
     public static Dictionary<string, float> boundaryPositions;
     public static Dictionary<string, Node> farthestNodes;
@@ -41,7 +40,6 @@ public class Generator : MonoBehaviour
         selectedNodeStack = new Stack<Node>();
 
         isDoneGenerating = false;
-        numberOfConnections = 0;
 
         boundaryPositions = new Dictionary<string, float>();
         farthestNodes = new Dictionary<string, Node>();
@@ -68,43 +66,40 @@ public class Generator : MonoBehaviour
                 {
                     // Check out the neighbours
                     if(neighbouringNodesItMayConnectTo != null && !selectedNodeStack.Peek().checkedOutNeighbours)
-                    {                        
-                        for(int connectionsWithNeighbours = 0; connectionsWithNeighbours < neighbouringNodesItMayConnectTo.Count; connectionsWithNeighbours++)
+                    {
+                        for (int indexOfNeighbour = 0; indexOfNeighbour < neighbouringNodesItMayConnectTo.Count; indexOfNeighbour++)
                         {
-                            bool isMeetingRotationDegreeCriteria = MeetRotationDegreeBetweenAdjacentNodes(neighbouringNodesItMayConnectTo[connectionsWithNeighbours].x, neighbouringNodesItMayConnectTo[connectionsWithNeighbours].y, selectedNodeStack.Peek());
+                            bool isMeetingRotationDegreeCriteria = MeetRotationDegreeBetweenAdjacentNodes(neighbouringNodesItMayConnectTo[indexOfNeighbour].x, neighbouringNodesItMayConnectTo[indexOfNeighbour].y, selectedNodeStack.Peek());
+                            bool isAvoidingNodeLineConnectionIntersections = AvoidNodeLineConnectionIntersections(neighbouringNodesItMayConnectTo[indexOfNeighbour].x, neighbouringNodesItMayConnectTo[indexOfNeighbour].y, selectedNodeStack.Peek(), true);
 
-                            if (selectedNodeStack.Peek().connections < selectedNodeStack.Peek().degree && isMeetingRotationDegreeCriteria)
+                            if (isMeetingRotationDegreeCriteria && isAvoidingNodeLineConnectionIntersections)
                             {
-                                if(neighbouringNodesItMayConnectTo[connectionsWithNeighbours].degree - neighbouringNodesItMayConnectTo[connectionsWithNeighbours].connections >= 2 && selectedNodeStack.Peek().requiredDoubleConnections > 0)
+                                if(neighbouringNodesItMayConnectTo[indexOfNeighbour].degree - neighbouringNodesItMayConnectTo[indexOfNeighbour].connections >= 2 && selectedNodeStack.Peek().requiredDoubleConnections > 0)
                                 {
                                     if (selectedNodeStack.Peek().degree - selectedNodeStack.Peek().connections >= 2)
                                     {
-                                        selectedNodeStack.Peek().adjacentNodes.Add(neighbouringNodesItMayConnectTo[connectionsWithNeighbours]);
-                                        selectedNodeStack.Peek().doubleAdjacentNodes.Add(neighbouringNodesItMayConnectTo[connectionsWithNeighbours]);
-                                        selectedNodeStack.Peek().neighbouringNodesForLineDrawing.Add(neighbouringNodesItMayConnectTo[connectionsWithNeighbours]);
+                                        selectedNodeStack.Peek().adjacentNodes.Add(neighbouringNodesItMayConnectTo[indexOfNeighbour]);
+                                        selectedNodeStack.Peek().doubleAdjacentNodes.Add(neighbouringNodesItMayConnectTo[indexOfNeighbour]);
+                                        selectedNodeStack.Peek().neighbouringNodesForLineDrawing.Add(neighbouringNodesItMayConnectTo[indexOfNeighbour]);
                                         selectedNodeStack.Peek().connections += 2;
 
-                                        neighbouringNodesItMayConnectTo[connectionsWithNeighbours].adjacentNodes.Add(selectedNodeStack.Peek());
-                                        neighbouringNodesItMayConnectTo[connectionsWithNeighbours].doubleAdjacentNodes.Add(selectedNodeStack.Peek());
-                                        neighbouringNodesItMayConnectTo[connectionsWithNeighbours].neighbouringNodesForLineDrawing.Add(selectedNodeStack.Peek());
-                                        neighbouringNodesItMayConnectTo[connectionsWithNeighbours].connections += 2;
-
-                                        numberOfConnections += 2;
+                                        neighbouringNodesItMayConnectTo[indexOfNeighbour].adjacentNodes.Add(selectedNodeStack.Peek());
+                                        neighbouringNodesItMayConnectTo[indexOfNeighbour].doubleAdjacentNodes.Add(selectedNodeStack.Peek());
+                                        neighbouringNodesItMayConnectTo[indexOfNeighbour].neighbouringNodesForLineDrawing.Add(selectedNodeStack.Peek());
+                                        neighbouringNodesItMayConnectTo[indexOfNeighbour].connections += 2;
                                     }
                                 }
                                 else
                                 {
-                                    selectedNodeStack.Peek().adjacentNodes.Add(neighbouringNodesItMayConnectTo[connectionsWithNeighbours]);
-                                    selectedNodeStack.Peek().singleAdjacentNodes.Add(neighbouringNodesItMayConnectTo[connectionsWithNeighbours]);
-                                    selectedNodeStack.Peek().neighbouringNodesForLineDrawing.Add(neighbouringNodesItMayConnectTo[connectionsWithNeighbours]);
+                                    selectedNodeStack.Peek().adjacentNodes.Add(neighbouringNodesItMayConnectTo[indexOfNeighbour]);
+                                    selectedNodeStack.Peek().singleAdjacentNodes.Add(neighbouringNodesItMayConnectTo[indexOfNeighbour]);
+                                    selectedNodeStack.Peek().neighbouringNodesForLineDrawing.Add(neighbouringNodesItMayConnectTo[indexOfNeighbour]);
                                     selectedNodeStack.Peek().connections++;
 
-                                    neighbouringNodesItMayConnectTo[connectionsWithNeighbours].adjacentNodes.Add(selectedNodeStack.Peek());
-                                    neighbouringNodesItMayConnectTo[connectionsWithNeighbours].singleAdjacentNodes.Add(selectedNodeStack.Peek());
-                                    neighbouringNodesItMayConnectTo[connectionsWithNeighbours].neighbouringNodesForLineDrawing.Add(selectedNodeStack.Peek());
-                                    neighbouringNodesItMayConnectTo[connectionsWithNeighbours].connections++;
-
-                                    numberOfConnections++;
+                                    neighbouringNodesItMayConnectTo[indexOfNeighbour].adjacentNodes.Add(selectedNodeStack.Peek());
+                                    neighbouringNodesItMayConnectTo[indexOfNeighbour].singleAdjacentNodes.Add(selectedNodeStack.Peek());
+                                    neighbouringNodesItMayConnectTo[indexOfNeighbour].neighbouringNodesForLineDrawing.Add(selectedNodeStack.Peek());
+                                    neighbouringNodesItMayConnectTo[indexOfNeighbour].connections++;
                                 }                               
                             }
                         }
@@ -167,203 +162,6 @@ public class Generator : MonoBehaviour
             // Spawn nodes
             GameObject nodeClone = Instantiate(nodeGameObject, new Vector3(listOfNodes[numberOrder].x, listOfNodes[numberOrder].y, 0), Quaternion.Euler(0, 0, 0));
             nodesToDestroy.Add(nodeClone);
-
-            #region FutureFeature
-            /*
-            List<GameObject> gObj_lines = new List<GameObject>();
-            List<LineRenderer> lRndr_lines = new List<LineRenderer>();
-
-            int numberOrderOfLine = 0;
-
-            
-            // Drawing lines between child and parent
-            if (numberOrder > 0)
-            {
-                if(listOfNodes[numberOrder].doubleAdjacentNodes.Any())
-                {
-                    for(int doubles = 0; doubles < listOfNodes[numberOrder].doubleAdjacentNodes.Count; doubles++)
-                    {
-                        if(listOfNodes[numberOrder].doubleAdjacentNodes[doubles] == listOfNodes[numberOrder].parent)
-                        {
-                            // line parent-child
-                            float k = -((listOfNodes[numberOrder].parent.y - listOfNodes[numberOrder].y) / (listOfNodes[numberOrder].parent.x - listOfNodes[numberOrder].x));
-                            float l = k * listOfNodes[numberOrder].x + listOfNodes[numberOrder].y;
-
-                            // parallels of double lines
-                            float l1 = 0.1f * Mathf.Sqrt(Mathf.Pow(k, 2) + 1) + l;
-                            float l2 = -0.1f * Mathf.Sqrt(Mathf.Pow(k, 2) + 1) + l;
-
-                            // determinant, inverse on line and normal
-                            float determinant = k * k + 1;
-
-                            float k_inverse = 1 / determinant * k;
-                            float y_inverse = -1 / determinant;
-                            float k_normal_inverse = 1 / determinant;
-                            float y_normal_inverse = 1 / determinant * k;
-
-                            // parent, child
-                            float l_parentNormal = -listOfNodes[numberOrder].parent.x + k * listOfNodes[numberOrder].parent.y;
-                            float l_childNormal = -listOfNodes[numberOrder].x + k * listOfNodes[numberOrder].y;
-
-                            // x, y of intersection
-                            float x1_parent = k_inverse * l1 + y_inverse * l_parentNormal;
-                            float y1_parent = k_normal_inverse * l1 + y_normal_inverse * l_parentNormal;
-                            float x2_parent = k_inverse * l2 + y_inverse * l_parentNormal;
-                            float y2_parent = k_normal_inverse * l2 + y_normal_inverse * l_parentNormal;
-                            float x1_child = k_inverse * l1 + y_inverse * l_childNormal;
-                            float y1_child = k_normal_inverse * l1 + y_normal_inverse * l_childNormal;
-                            float x2_child = k_inverse * l2 + y_inverse * l_childNormal;
-                            float y2_child = k_normal_inverse * l2 + y_normal_inverse * l_childNormal;
-
-                            gObj_lines.Add(new GameObject());
-                            gObj_lines.Add(new GameObject());
-
-                            gObj_lines[numberOrderOfLine].AddComponent<LineRenderer>();
-                            gObj_lines[numberOrderOfLine + 1].AddComponent<LineRenderer>();
-
-                            gObj_lines[numberOrderOfLine].transform.SetParent(nodeClone.transform);
-                            gObj_lines[numberOrderOfLine + 1].transform.SetParent(nodeClone.transform);
-
-                            lRndr_lines.Add(new LineRenderer());
-                            lRndr_lines.Add(new LineRenderer());
-
-                            lRndr_lines[numberOrderOfLine] = gObj_lines[numberOrderOfLine].GetComponent<LineRenderer>();
-                            lRndr_lines[numberOrderOfLine + 1] = gObj_lines[numberOrderOfLine + 1].GetComponent<LineRenderer>();
-
-                            lRndr_lines[numberOrderOfLine].startWidth = 0.07f;
-                            lRndr_lines[numberOrderOfLine].endWidth = 0.07f;
-                            lRndr_lines[numberOrderOfLine + 1].startWidth = 0.07f;
-                            lRndr_lines[numberOrderOfLine + 1].endWidth = 0.07f;
-
-                            lRndr_lines[numberOrderOfLine].positionCount = 2;
-                            lRndr_lines[numberOrderOfLine + 1].positionCount = 2;
-
-                            lRndr_lines[numberOrderOfLine].SetPosition(0, new Vector3(x1_child, y1_child, 0));
-                            lRndr_lines[numberOrderOfLine].SetPosition(1, new Vector3(x1_parent, y1_parent, 0));
-
-                            lRndr_lines[numberOrderOfLine + 1].SetPosition(0, new Vector3(x2_child, y2_child, 0));
-                            lRndr_lines[numberOrderOfLine + 1].SetPosition(1, new Vector3(x2_parent, y2_parent, 0));
-
-                            numberOrderOfLine += 2;
-                        }
-                    }
-                }
-                else
-                {
-                    gObj_lines.Add(new GameObject());
-
-                    gObj_lines[numberOrderOfLine].AddComponent<LineRenderer>();
-
-                    gObj_lines[numberOrderOfLine].transform.SetParent(nodeClone.transform);
-
-                    lRndr_lines.Add(new LineRenderer());
-
-                    lRndr_lines[numberOrderOfLine] = gObj_lines[numberOrderOfLine].GetComponent<LineRenderer>();
-
-                    lRndr_lines[numberOrderOfLine].positionCount = 2;
-                    lRndr_lines[numberOrderOfLine].startWidth = 0.07f;
-                    lRndr_lines[numberOrderOfLine].endWidth = 0.07f;
-
-                    lRndr_lines[numberOrderOfLine].SetPosition(0, new Vector3(listOfNodes[numberOrder].x, listOfNodes[numberOrder].y, 0));
-                    lRndr_lines[numberOrderOfLine].SetPosition(1, new Vector3(listOfNodes[numberOrder].parent.x, listOfNodes[numberOrder].parent.y, 0));
-
-                    numberOrderOfLine++;
-                }               
-            }
-            
-            // Drawing lines between neighbouring nodes
-            if(listOfNodes[numberOrder].doubleAdjacentNodes.Any())
-            {
-                for(int doubles = 0; doubles < listOfNodes[numberOrder].doubleAdjacentNodes.Count; doubles++)
-                {
-                    // line start-end node
-                    float k = -((listOfNodes[numberOrder].doubleAdjacentNodes[doubles].y - listOfNodes[numberOrder].y) / (listOfNodes[numberOrder].doubleAdjacentNodes[doubles].x - listOfNodes[numberOrder].x));
-                    float l = k * listOfNodes[numberOrder].x + listOfNodes[numberOrder].y;
-
-                    // parallels of double lines
-                    float l1 = 0.1f * Mathf.Sqrt(Mathf.Pow(k, 2) + 1) + l;
-                    float l2 = -0.1f * Mathf.Sqrt(Mathf.Pow(k, 2) + 1) + l;
-
-                    // determinant, inverse on line and normal
-                    float determinant = k * k + 1;
-
-                    float k_inverse = 1 / determinant * k;
-                    float y_inverse = -1 / determinant;
-                    float k_normal_inverse = 1 / determinant;
-                    float y_normal_inverse = 1 / determinant * k;
-
-                    // start, end
-                    float l_startNormal = -listOfNodes[numberOrder].doubleAdjacentNodes[doubles].x + k * listOfNodes[numberOrder].doubleAdjacentNodes[doubles].y;
-                    float l_endNormal = -listOfNodes[numberOrder].x + k * listOfNodes[numberOrder].y;
-
-                    // x, y of intersection
-                    float x1_start = k_inverse * l1 + y_inverse * l_startNormal;
-                    float y1_start = k_normal_inverse * l1 + y_normal_inverse * l_startNormal;
-                    float x2_start = k_inverse * l2 + y_inverse * l_startNormal;
-                    float y2_start = k_normal_inverse * l2 + y_normal_inverse * l_startNormal;
-                    float x1_end = k_inverse * l1 + y_inverse * l_endNormal;
-                    float y1_end = k_normal_inverse * l1 + y_normal_inverse * l_endNormal;
-                    float x2_end = k_inverse * l2 + y_inverse * l_endNormal;
-                    float y2_end = k_normal_inverse * l2 + y_normal_inverse * l_endNormal;
-
-                    gObj_lines.Add(new GameObject());
-                    gObj_lines.Add(new GameObject());
-
-                    gObj_lines[numberOrderOfLine].AddComponent<LineRenderer>();
-                    gObj_lines[numberOrderOfLine + 1].AddComponent<LineRenderer>();
-
-                    gObj_lines[numberOrderOfLine].transform.SetParent(nodeClone.transform);
-                    gObj_lines[numberOrderOfLine + 1].transform.SetParent(nodeClone.transform);
-
-                    lRndr_lines.Add(new LineRenderer());
-                    lRndr_lines.Add(new LineRenderer());
-
-                    lRndr_lines[numberOrderOfLine] = gObj_lines[numberOrderOfLine].GetComponent<LineRenderer>();
-                    lRndr_lines[numberOrderOfLine + 1] = gObj_lines[numberOrderOfLine + 1].GetComponent<LineRenderer>();
-
-                    lRndr_lines[numberOrderOfLine].startWidth = 0.07f;
-                    lRndr_lines[numberOrderOfLine].endWidth = 0.07f;
-                    lRndr_lines[numberOrderOfLine + 1].startWidth = 0.07f;
-                    lRndr_lines[numberOrderOfLine + 1].endWidth = 0.07f;
-
-                    lRndr_lines[numberOrderOfLine].positionCount = 2;
-                    lRndr_lines[numberOrderOfLine + 1].positionCount = 2;
-
-                    lRndr_lines[numberOrderOfLine].SetPosition(0, new Vector3(x1_start, y1_start, 0));
-                    lRndr_lines[numberOrderOfLine].SetPosition(1, new Vector3(x1_end, y1_end, 0));
-
-                    lRndr_lines[numberOrderOfLine + 1].SetPosition(0, new Vector3(x2_start, y2_start, 0));
-                    lRndr_lines[numberOrderOfLine + 1].SetPosition(1, new Vector3(x2_end, y2_end, 0));
-
-                    numberOrderOfLine += 2;
-                }
-            }
-            if (listOfNodes[numberOrder].singleAdjacentNodes.Any())
-            {
-                for (int singles = 0; singles < listOfNodes[numberOrder].singleAdjacentNodes.Count; singles++)
-                {
-                    gObj_lines.Add(new GameObject());
-
-                    gObj_lines[numberOrderOfLine].AddComponent<LineRenderer>();
-
-                    gObj_lines[numberOrderOfLine].transform.SetParent(nodeClone.transform);
-
-                    lRndr_lines.Add(new LineRenderer());
-
-                    lRndr_lines[numberOrderOfLine] = gObj_lines[numberOrderOfLine].GetComponent<LineRenderer>();
-
-                    lRndr_lines[numberOrderOfLine].positionCount = 2;
-                    lRndr_lines[numberOrderOfLine].startWidth = 0.07f;
-                    lRndr_lines[numberOrderOfLine].endWidth = 0.07f;
-
-                    lRndr_lines[numberOrderOfLine].SetPosition(0, new Vector3(listOfNodes[numberOrder].x, listOfNodes[numberOrder].y, 0));
-                    lRndr_lines[numberOrderOfLine].SetPosition(1, new Vector3(listOfNodes[numberOrder].singleAdjacentNodes[singles].x, listOfNodes[numberOrder].singleAdjacentNodes[singles].y, 0));
-
-                    numberOrderOfLine++;
-                }
-            }
-            */
-            #endregion
         }
     }
 
@@ -400,6 +198,7 @@ public class Generator : MonoBehaviour
     {
         Node node = new Node();
 
+        // 3rd+ node
         if(listOfNodes.Count >= 2)
         {
             Tuple<float, float> coordinatesToSpawn = SetNodePosition(parent);
@@ -415,7 +214,7 @@ public class Generator : MonoBehaviour
                 return;
             }         
         }
-        
+        // 2nd node 
         else
         {
             int directionX = UnityEngine.Random.Range(0, 2);
@@ -447,7 +246,6 @@ public class Generator : MonoBehaviour
         if(parent.requiredDoubleConnections > 0 && parent.degree - parent.connections >= 2)
         {
             node.degree = UnityEngine.Random.Range(2, 9);
-            numberOfConnections += 2;
 
             node.doubleAdjacentNodes.Add(parent);
             parent.doubleAdjacentNodes.Add(node);
@@ -459,16 +257,7 @@ public class Generator : MonoBehaviour
         }      
         else
         {
-            if (numberOfConnections > level * 2)
-            {
-                node.degree = UnityEngine.Random.Range(1, 3);
-            }
-            else
-            {
-                node.degree = UnityEngine.Random.Range(5, 9);
-            }
-                
-            numberOfConnections++;
+            node.degree = 8;
 
             node.singleAdjacentNodes.Add(parent);
             parent.singleAdjacentNodes.Add(node);
@@ -507,7 +296,7 @@ public class Generator : MonoBehaviour
         
         for(int counterOfNodes = 0; counterOfNodes < listOfNodes.Count; counterOfNodes++)
         {
-            if(listOfNodes[counterOfNodes].adjacentNodes.Count < listOfNodes[counterOfNodes].degree && node.parent != listOfNodes[counterOfNodes])
+            if(listOfNodes[counterOfNodes].connections < listOfNodes[counterOfNodes].degree && node.parent != listOfNodes[counterOfNodes])
             {
                 float distance = Mathf.Sqrt(Mathf.Pow(listOfNodes[counterOfNodes].y - node.y, 2) + Mathf.Pow(listOfNodes[counterOfNodes].x - node.x, 2));
 
@@ -534,18 +323,19 @@ public class Generator : MonoBehaviour
         // x
         for (float x = -gameAreaX; x <= gameAreaX; x += offsetOfForLoop)
         {
-            offsetOfForLoop = UnityEngine.Random.Range(0.25f, 1f);
+            offsetOfForLoop = UnityEngine.Random.Range(minSearchingPositionOffset, maxSearchingPositionOffset);
+
             // y
             for (float y = gameAreaY; y >= -gameAreaY; y -= offsetOfForLoop)
             {
-                offsetOfForLoop = UnityEngine.Random.Range(0.25f, 1f);
+                offsetOfForLoop = UnityEngine.Random.Range(minSearchingPositionOffset, maxSearchingPositionOffset);
 
                 float distance = Mathf.Sqrt(Mathf.Pow(parent.y - y, 2) + Mathf.Pow(parent.x - x, 2));
 
                 if(distance >= minDistance && distance <= maxDistance)
                 {
                     bool isAvoidingNodes = AvoidNodes(x, y);
-                    bool isAvoidingNodeLineIntersections = AvoidNodeLineConnectionIntersections(x, y, parent);
+                    bool isAvoidingNodeLineIntersections = AvoidNodeLineConnectionIntersections(x, y, parent, false);
                     bool isMeetingRotationDegreeCriteria = MeetRotationDegreeBetweenAdjacentNodes(x, y, parent);
 
                     if (isAvoidingNodes && isAvoidingNodeLineIntersections && isMeetingRotationDegreeCriteria)
@@ -588,13 +378,13 @@ public class Generator : MonoBehaviour
         return isAllowedToSpawn;
     }
 
-    private bool AvoidNodeLineConnectionIntersections(float destinationXCoordinate, float destinationYCoordinate, Node sourceNode)
+    private bool AvoidNodeLineConnectionIntersections(float destinationXCoordinate, float destinationYCoordinate, Node sourceNode, bool isNeighbourSeeking)
     {
         bool isAllowedToSpawn = false;
 
         // -kx + y
-        float k1 = -((sourceNode.y - destinationYCoordinate) / (sourceNode.x - destinationXCoordinate));
-        float y1 = 1;
+        double k1 = -((sourceNode.y - destinationYCoordinate) / (sourceNode.x - destinationXCoordinate));
+        double y1 = 1;
 
         if (Double.IsInfinity(k1))
         {
@@ -603,24 +393,34 @@ public class Generator : MonoBehaviour
         }      
 
         // l 
-        float l1 = k1 * sourceNode.x + sourceNode.y;
+        double l1 = k1 * sourceNode.x + sourceNode.y;
 
+        // avoid lining next to nodes
+        for(int numberOrder = 0; numberOrder < listOfNodes.Count; numberOrder++)
+        {
+            double distance = Math.Abs(k1 * listOfNodes[numberOrder].x + y1 * listOfNodes[numberOrder].y - l1) / Math.Sqrt(Math.Pow(k1, 2) + Math.Pow(y1, 2));
+
+            if (distance < offsetOfNodeAvoidance)
+            {
+                isAllowedToSpawn = false;
+                // STACK OVERFLOW EXCEPTION
+                //return isAllowedToSpawn;
+            }
+            else
+            {
+                isAllowedToSpawn = true;
+            }
+        }
+        
+        // 1st run
         for (int numberOrderOfNode = 1; numberOrderOfNode < listOfNodes.Count; numberOrderOfNode++)
         {
-            // distance from node
-            float distanceFromNode = Mathf.Sqrt(Mathf.Pow(listOfNodes[numberOrderOfNode].y - destinationYCoordinate, 2) + Mathf.Pow(listOfNodes[numberOrderOfNode].x - destinationXCoordinate, 2));
-
-            if (distanceFromNode < offsetOfNodeAvoidance)
-            {               
-                isAllowedToSpawn = false;
-                return isAllowedToSpawn;
-            }
-
+            // 2nd run
             for (int counterOfAdjacentNodes = 0; counterOfAdjacentNodes < listOfNodes[numberOrderOfNode].adjacentNodes.Count; counterOfAdjacentNodes++)
             {
                 // -kx + y
-                float k2 = -((listOfNodes[numberOrderOfNode].adjacentNodes[counterOfAdjacentNodes].y - listOfNodes[numberOrderOfNode].y) / (listOfNodes[numberOrderOfNode].adjacentNodes[counterOfAdjacentNodes].x - listOfNodes[numberOrderOfNode].x));
-                float y2 = 1;
+                double k2 = -((listOfNodes[numberOrderOfNode].adjacentNodes[counterOfAdjacentNodes].y - listOfNodes[numberOrderOfNode].y) / (listOfNodes[numberOrderOfNode].adjacentNodes[counterOfAdjacentNodes].x - listOfNodes[numberOrderOfNode].x));
+                double y2 = 1;
 
                 if (Double.IsInfinity(k2))
                 {
@@ -629,19 +429,23 @@ public class Generator : MonoBehaviour
                 }
 
                 // l
-                float l2 = k2 * listOfNodes[numberOrderOfNode].x + listOfNodes[numberOrderOfNode].y;
+                double l2 = k2 * listOfNodes[numberOrderOfNode].x + listOfNodes[numberOrderOfNode].y;
 
-                // distance from line
-                float distanceOfNodeFromLine = Mathf.Abs(k2 * destinationXCoordinate + y2 * destinationYCoordinate - l2) / Mathf.Sqrt(Mathf.Pow(k2, 2) + Mathf.Pow(y2, 2));                
-
-                if(distanceOfNodeFromLine < offsetOfNodeAvoidance)
+                // viable only for node spawning
+                if(!isNeighbourSeeking)
                 {
-                    isAllowedToSpawn = false;
-                    return isAllowedToSpawn;
+                    // distance from line
+                    double distanceOfNodeFromLine = Math.Abs(k2 * destinationXCoordinate + y2 * destinationYCoordinate - l2) / Math.Sqrt(Math.Pow(k2, 2) + Math.Pow(y2, 2));
+
+                    if (distanceOfNodeFromLine < offsetOfNodeAvoidance)
+                    {
+                        isAllowedToSpawn = false;
+                        return isAllowedToSpawn;
+                    }
                 }
 
                 // determinant, inverse
-                float determinant = k1 * y2 - y1 * k2;
+                double determinant = k1 * y2 - y1 * k2;
 
                 if (determinant == 0)
                 {
@@ -649,14 +453,14 @@ public class Generator : MonoBehaviour
                     return isAllowedToSpawn;
                 }
 
-                float k1_inverse = 1 / determinant * y2;
-                float y1_inverse = 1 / determinant * -y1;
-                float k2_inverse = 1 / determinant * -k2;
-                float y2_inverse = 1 / determinant * k1;
+                double k1_inverse = 1 / determinant * y2;
+                double y1_inverse = 1 / determinant * -y1;
+                double k2_inverse = 1 / determinant * -k2;
+                double y2_inverse = 1 / determinant * k1;
 
                 // x, y of intersection
-                float x = k1_inverse * l1 + y1_inverse * l2;
-                float y = k2_inverse * l1 + y2_inverse * l2;
+                double x = k1_inverse * l1 + y1_inverse * l2;
+                double y = k2_inverse * l1 + y2_inverse * l2;
 
                 int counter_intersectionX_less = 0;
                 int counter_intersectionX_more = 0;
@@ -701,13 +505,13 @@ public class Generator : MonoBehaviour
                         counter_intersectionY_equal++;
                 }
 
-                if ((counter_intersectionX_less == 2 && counter_intersectionX_more == 2 && counter_intersectionY_less == 2 && counter_intersectionY_more == 2) || counter_intersectionX_equal > 0 || counter_intersectionY_equal > 0)
+                if (counter_intersectionX_less == 2 && counter_intersectionX_more == 2 && counter_intersectionY_less == 2 && counter_intersectionY_more == 2)
                 {
                     isAllowedToSpawn = false;
                     return isAllowedToSpawn;
                 }
                 else
-                {                  
+                {
                     isAllowedToSpawn = true;
                 }
             }  
@@ -726,9 +530,9 @@ public class Generator : MonoBehaviour
         {
             float k2 = (sourceNode.adjacentNodes[numberOrderOfAdjacentNodes].y - sourceNode.y) / (sourceNode.adjacentNodes[numberOrderOfAdjacentNodes].x - sourceNode.x);
 
-            float theta = Mathf.Atan(Mathf.Abs((k2 - k1) / (1 + k1 * k2)));
+            float theta = Mathf.Atan(Mathf.Abs((k2 - k1) / (1 + k2 * k1)));
 
-            if(theta < Mathf.PI / 4f || theta > 2 * Mathf.PI - Mathf.PI / 4f || (theta > 3 * Mathf.PI / 4 && theta < 5 * Mathf.PI / 4))
+            if(theta < Mathf.PI / 4f || theta > 2 * Mathf.PI - Mathf.PI / 4f)
             {
                 isAllowedToSpawn = false;
                 return isAllowedToSpawn;

@@ -66,11 +66,11 @@ public class CameraControl : MonoBehaviour
 
         if(distanceMinToMaxX > distanceMinToMaxY)
         {
-            Camera.main.orthographicSize = distanceMinToMaxX + 1.5f; 
+            Camera.main.orthographicSize = distanceMinToMaxX + 1f; 
         }
         else
         {
-            Camera.main.orthographicSize = distanceMinToMaxY / 1.1f;
+            Camera.main.orthographicSize = distanceMinToMaxY;
         }
 
         zoomOutMax = Camera.main.orthographicSize;
