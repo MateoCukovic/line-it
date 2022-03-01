@@ -8,6 +8,12 @@ Mobile game inspired by graph theory, spinoff of a Japanese game called Hashiwok
   <li>All nodes need to be interconnected</li>
 </ul>
 
+<h3>BUGS</h3> 
+<ul>
+  <li>Unlimited connections allowed (more than 2)</li>
+  <li>Connecting lines connecting node with 'nothing' (rare)</li>
+</ul>
+
 <p float="left">
   <img src="https://user-images.githubusercontent.com/63672480/118521403-4b58db00-b73b-11eb-93a1-da48405251c9.jpg" alt="Main Menu" width="32%">
   <img src="https://user-images.githubusercontent.com/63672480/118522055-ee115980-b73b-11eb-9a08-d5100bc5408f.jpg" alt="Level" width="32%">
