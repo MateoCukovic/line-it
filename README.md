@@ -1,5 +1,5 @@
 # line-it
-Mobile game inspired by graph theory, spinoff of Hashiwokakero
+Mobile game inspired by graph theory, spinoff of a Japanese game called Hashiwokakero (eng. Bridges)
 
 <h3>OBJECTIVE</h3> 
 <ul>
