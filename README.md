@@ -1,5 +1,6 @@
 # line-it
-Mobile game inspired by graph theory, spinoff of a Japanese game called Hashiwokakero (eng. Bridges)
+Mobile game inspired by graph theory based on a Japanese game called Hashiwokakero (eng. Bridges).
+Used a custom simple generation algorithm and DFS for validating the solution when the user connects all the nodes.
 
 <h3>OBJECTIVE</h3> 
 <ul>
@@ -11,7 +12,7 @@ Mobile game inspired by graph theory, spinoff of a Japanese game called Hashiwok
 <h3>BUGS</h3> 
 <ul>
   <li>Unlimited connections allowed (more than 2)</li>
-  <li>Connecting lines connecting node with 'nothing' (rare)</li>
+  <li>Sometimes Unity Line Renderer renders the line in a random position connecting the node to nothing</li>
 </ul>
 
 <p float="left">
